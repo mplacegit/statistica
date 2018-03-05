@@ -17,7 +17,7 @@ class MyServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-      
+              include __DIR__ . '/routes.php';
 	          $this->publishes([
               __DIR__ . '/../config/mp-statistica.php' => config_path('mp-statistica.php'),
               ], 'config');

@@ -4,7 +4,7 @@ namespace Mplacegit\Statistica;
 
 use Illuminate\Support\Facades\Facade;
 
-class Advertise extends Facade
+class AdvertiseFacade extends Facade
 {
     /**
      * Get the registered name of the component.
