@@ -21,6 +21,7 @@ class MyServiceProvider extends ServiceProvider
 	          $this->publishes([
               __DIR__ . '/../config/mp-statistica.php' => config_path('mp-statistica.php'),
               ], 'config');
+              $this->loadViewsFrom(__DIR__.'/../views', 'mp-statistica');
 
 		  
     }
