@@ -1,0 +1,19 @@
+{
+    "version": "1.0.0",
+    "name": "mplacegit/statistica",
+    "description": "test",
+    "license": "MIT",
+	 "authors": [
+        {
+            "name": "sargamor",
+            "email": "preduvedomlenie@gmail.com"
+        }
+    ],
+	    "autoload": {
+          "psr-4": {
+		  "Mplacegit\\Statistica\\": "./"
+           }
+    },
+    "minimum-stability": "dev",
+    "require": {}
+}
