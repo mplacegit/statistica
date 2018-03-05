@@ -95,6 +95,38 @@ order by vv desc";
 			$sthInsert->execute($rept);
 			//var_dump($count);
 		}
+		$sql="update widget_requests_server_loaded 
+        set cnt=?,
+        avg_loaded=?
+        WHERE day=? and server_id =? and hash=? 
+        ";
+		$sthUpdate=$pdo->prepare($sql);
+		$sql="insert into widget_requests_server_loaded (
+        day,
+        server_id,
+        hash,
+        cnt,
+        avg_loaded
+        )
+	    select ?,?,?,?,?,?
+		WHERE NOT EXISTS (SELECT 1 FROM widget_requests_server_loaded WHERE day=? and server_id =? and hash=?) 
+        ";
+		$sthInsert=$pdo->prepare($sql);
+		$sql="select 
+        day,id_server,hash,url,count(*) as cnt,nosearch,round(avg(loaded),4) as vv
+        ,max(loaded) as mm
+        from widget_requests where day = '".$this->date."'
+        group by day,id_server,hash,url,nosearch
+        order by vv desc";
+		$data=\DB::connection('pgstatistic_new')->select($sql);
+		foreach($data as $d){
+			$rept=[$d->cnt,
+			$d->vv,
+			$d->day,
+			$d->id_server
+			];
+			var_dump($rept);
+		}
 		
 	}
 
