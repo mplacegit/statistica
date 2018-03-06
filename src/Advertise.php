@@ -153,7 +153,8 @@ order by vv desc";
 		max_loaded=?,
 		url=?,
 		request=?,
-		last_loaded=?
+		last_loaded=?,
+		datetime_max_last=?
 		WHERE day=? and server_id =? and hash=? 
         ";
 		$sthUpdate=$pdo->prepare($sql);
@@ -166,14 +167,15 @@ order by vv desc";
 		max_loaded,
 		url,
 		request,
-		last_loaded
+		last_loaded,
+		datetime_max_last
         )
-	    select ?,?,?,?,?,?,?,?,?
+	    select ?,?,?,?,?,?,?,?,?,?
 		WHERE NOT EXISTS (SELECT 1 FROM widget_requests_server_loaded WHERE day=? and server_id =? and hash=?) 
         ";
 		$sthInsert=$pdo->prepare($sql);
 		
-		$sql="select id_server,day,hash,loaded,request
+		$sql="select id_server,day,hash,loaded,request,max(datetime) as dt
 		 from widget_requests where day = '".$this->date."'
 		 group by id_server,day,hash,loaded,request
 		";
@@ -181,7 +183,7 @@ order by vv desc";
 		$pererequest=[];
 		foreach($rdata as $d){
 			if($d->request)
-			$pererequest[$d->day][$d->id_server][$d->hash][$d->loaded]=$d->request;
+			$pererequest[$d->day][$d->id_server][$d->hash][$d->loaded]=[$d->request,$d->dt];
 			
 		}
 		
@@ -196,9 +198,11 @@ order by vv desc";
 		$data=\DB::connection('pgstatistic_new')->select($sql);
 		foreach($data as $d){
 			$req="";
+			$mq=null;
 			if(isset($pererequest[$d->day][$d->id_server][$d->hash][$d->mm])){
-				$req=$pererequest[$d->day][$d->id_server][$d->hash][$d->mm];
-				#var_dump($req);
+				$req=$pererequest[$d->day][$d->id_server][$d->hash][$d->mm][0];
+				$mq=$pererequest[$d->day][$d->id_server][$d->hash][$d->mm][1];
+				#var_dump($mq);
 				
 			}else{
 				#print "вотфигня ".$d->url."\n";
@@ -209,6 +213,7 @@ order by vv desc";
 			$d->url,
 			$req,
 			$d->dt,
+			$mq,
 			$d->day,
 			$d->id_server,
 			$d->hash
@@ -227,6 +232,7 @@ order by vv desc";
 			$d->url,
 			$req,
 			$d->dt,
+			$mq,
 			$d->day,
 			$d->id_server,
 			$d->hash

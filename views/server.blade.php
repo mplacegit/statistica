@@ -17,11 +17,12 @@
          <table class="table">
  	         <thead>
 		        <tr>
-			       <th style="width:25%">Запрос</th>
+			       <th style="width:21%">Запрос</th>
 				   <th>{!! $sorts["last_loaded"] !!}</th>
 				   <th>Кол. загрузок</th>
 			       <th>{!! $sorts["avg_loaded"] !!}</th>
 				   <th>{!! $sorts["max_loaded"] !!}</th>
+				   <th>Дата макс.</th>
 		         </tr>
 	        </thead>
 			@foreach($collection as $col)
@@ -31,6 +32,7 @@
 			<td>{{$col->cnt}}</td>
 			<td>{{$col->avg_loaded}}</td>
 			<td>{{$col->max_loaded}}</td>
+			<td>{{$col->datetime_max_last}}</td>
 			</tr>
 			@endforeach
 	        <tbody>
