@@ -20,21 +20,73 @@ and w.ltd is not null and w.ltd<>''
  where t1.id=?";
 		$this->serverSth=$pdo->prepare($sql);
 		
+	
+		
 	}
 	public function  getServerName($id_server){
 		if(!isset($this->Servers[$id_server])){
-		$d=$this->serverSth->execute([$id_server]);
+		$this->serverSth->execute([$id_server]);
 		$d=$this->serverSth->fetch(\PDO::FETCH_ASSOC);
 		$this->Servers[$id_server]=$d;
 		}
 		return $this->Servers[$id_server];
 		
 	}
+
 	public function  Calculate(){
-		
+		$pages_cnt=0;
+        $request_sum=0;
+        $max_loaded=0;
+        $avg_loaded=0;
+		$sql="
+		select  round(avg(loaded),4) as avg_loaded 
+,max(loaded) as max_loaded
+from widget_requests where nosearch =0
+and
+day ='".$this->date."'
+		";
+		$da=\DB::connection('pgstatistic_new')->select($sql);
+		if($da){
+	$max_loaded=$da[0]->max_loaded;
+	$avg_loaded=$da[0]->avg_loaded;
+
+}
+$sql="select count(*) as cnt,sum(cnt) as summa from (
+select  hash,count(*) as cnt
+from widget_requests where 1=1
+and day ='".$this->date."'
+group by hash
+) h
+";	
+
+$da=\DB::connection('pgstatistic_new')->select($sql);
+if($da){
+	$pages_cnt=$da[0]->cnt;
+	$request_sum=$da[0]->summa;
+
+}
+  		
 		print $this->date; print " всё будет ок\n";
 		$pdo=\DB::connection('pgstatistic_new')->getPdo();
-		
+
+		$sql="update widget_day_summary 
+
+    set pages_cnt = $pages_cnt,
+    request_sum = $request_sum,
+    max_loaded = $max_loaded,
+    avg_loaded = $avg_loaded
+    WHERE day='".$this->date."' ";
+	$pdo->exec($sql);
+	$sql="insert into widget_day_summary (
+    day,
+    pages_cnt,
+    request_sum,
+    max_loaded,
+    avg_loaded
+   ) select '".$this->date."',$pages_cnt,$request_sum,$max_loaded,$avg_loaded
+   WHERE NOT EXISTS (SELECT 1 FROM widget_day_summary  WHERE day='".$this->date."' )";
+   $pdo->exec($sql);
+
 				$sql="
 		update widget_requests_loaded
         set cnt=?,
@@ -97,8 +149,12 @@ order by vv desc";
 		}
 		$sql="update widget_requests_server_loaded 
         set cnt=?,
-        avg_loaded=?
-        WHERE day=? and server_id =? and hash=? 
+        avg_loaded=?,
+		max_loaded=?,
+		url=?,
+		request=?,
+		last_loaded=?
+		WHERE day=? and server_id =? and hash=? 
         ";
 		$sthUpdate=$pdo->prepare($sql);
 		$sql="insert into widget_requests_server_loaded (
@@ -106,26 +162,77 @@ order by vv desc";
         server_id,
         hash,
         cnt,
-        avg_loaded
+        avg_loaded,
+		max_loaded,
+		url,
+		request,
+		last_loaded
         )
-	    select ?,?,?,?,?,?
+	    select ?,?,?,?,?,?,?,?,?
 		WHERE NOT EXISTS (SELECT 1 FROM widget_requests_server_loaded WHERE day=? and server_id =? and hash=?) 
         ";
 		$sthInsert=$pdo->prepare($sql);
+		
+		$sql="select id_server,day,hash,loaded,request
+		 from widget_requests where day = '".$this->date."'
+		 group by id_server,day,hash,loaded,request
+		";
+		$rdata=\DB::connection('pgstatistic_new')->select($sql);
+		$pererequest=[];
+		foreach($rdata as $d){
+			if($d->request)
+			$pererequest[$d->day][$d->id_server][$d->hash][$d->loaded]=$d->request;
+			
+		}
+		
+		
 		$sql="select 
         day,id_server,hash,url,count(*) as cnt,nosearch,round(avg(loaded),4) as vv
         ,max(loaded) as mm
+		,max(datetime) as dt
         from widget_requests where day = '".$this->date."'
         group by day,id_server,hash,url,nosearch
         order by vv desc";
 		$data=\DB::connection('pgstatistic_new')->select($sql);
 		foreach($data as $d){
+			$req="";
+			if(isset($pererequest[$d->day][$d->id_server][$d->hash][$d->mm])){
+				$req=$pererequest[$d->day][$d->id_server][$d->hash][$d->mm];
+				#var_dump($req);
+				
+			}else{
+				#print "вотфигня ".$d->url."\n";
+			}
 			$rept=[$d->cnt,
 			$d->vv,
+			$d->mm,
+			$d->url,
+			$req,
+			$d->dt,
 			$d->day,
-			$d->id_server
+			$d->id_server,
+			$d->hash
 			];
-			var_dump($rept);
+			$sthUpdate->execute($rept);
+			$count = $sthUpdate->rowCount();
+			
+			if($count) continue;
+			$rept=[
+			$d->day,
+			$d->id_server,
+			$d->hash,
+			$d->cnt,
+			$d->vv,
+			$d->mm,
+			$d->url,
+			$req,
+			$d->dt,
+			$d->day,
+			$d->id_server,
+			$d->hash
+			];
+			$sthInsert->execute($rept);
+			//var_dump($d->dt);
 		}
 		
 	}
