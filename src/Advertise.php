@@ -5,20 +5,6 @@ class Advertise
 	private $date;
 	public function setDate($date){
 		$this->date=$date;
-		$this->Servers=[];
-		$pdo =\DB::connection()->getPdo();
-		$sql="select t1.id
-,t1.user_id
-,t1.domain
-,w.ltd
-,u.name as user_name
-from (partner_pads t1
-inner join users u on u.id=t1.user_id
-)
-left join widgets w on w.pad=t1.id
-and w.ltd is not null and w.ltd<>''
- where t1.id=?";
-		$this->serverSth=$pdo->prepare($sql);
 		
 	
 		
@@ -34,6 +20,22 @@ and w.ltd is not null and w.ltd<>''
 	}
 
 	public function  Calculate(){
+		$this->Servers=[];
+		$pdoss =\DB::connection()->getPdo();
+		$sql="select t1.id
+,t1.user_id
+,t1.domain
+,w.ltd
+,u.name as user_name
+from (partner_pads t1
+inner join users u on u.id=t1.user_id
+)
+left join widgets w on w.pad=t1.id
+and w.ltd is not null and w.ltd<>''
+ where t1.id=?";
+		$this->serverSth=$pdoss->prepare($sql);
+		
+		
 		$pages_cnt=0;
         $request_sum=0;
         $max_loaded=0;
@@ -240,7 +242,56 @@ order by vv desc";
 			$sthInsert->execute($rept);
 			//var_dump($d->dt);
 		}
+				$myhour=preg_replace('/^0/','',date("H"));
+		if($myhour==6){
+		$myday=date("Y-m-d",time()-(3600*48));
+		$sql="delete from widget_requests where day <'$myday';
+		";
+		$pdo->exec($sql);
 		
+		print "delete widget_requests untill $myday !!!!\n";
+		}
+		$sql="insert into widget_search_requests_tmp (
+        id_server,
+        hash,
+        request,
+        str_index
+        )
+        select id_server,hash,request,md5(request) 
+        from widget_requests
+        where request is not null and request <>''
+        group by id_server,hash,request;
+		insert into 
+widget_search_requests (
+    id_server,
+    hash,
+    request,
+    str_index
+)
+select 
+t.id_server,
+    t.hash,
+    t.request,
+    t.str_index
+from(
+select id_server,
+    hash,
+    request,
+    str_index from widget_search_requests_tmp
+	group by id_server,
+    hash,
+    request,
+    str_index
+) t
+left join widget_search_requests z
+on z.id_server = t.id_server
+and z.hash  = t.hash
+and z.str_index=t.str_index
+where z.id_server is null ;
+truncate table widget_search_requests_tmp
+		";
+		$pdo->exec($sql);
 	}
+	
 
 }

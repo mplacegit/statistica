@@ -37,5 +37,8 @@ class MyServiceProvider extends ServiceProvider
 		$this->app->singleton('mp-stat', function ($app) {
             return $app->make(Advertise::class);
         });
+		$this->app->singleton('mp-advertstat', function ($app) {
+            return $app->make(AdvertStat::class);
+        });
     }
 }
